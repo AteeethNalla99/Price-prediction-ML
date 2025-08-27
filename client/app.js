@@ -18,46 +18,63 @@ function getBHKValue() {
   return -1; // Invalid Value
 }
 
-function onClickedEstimatePrice() {
+// Attach event listener properly
+$(document).ready(function() {
+  $('#estimatePriceBtn').click(onClickedEstimatePrice);
+});
+
+function onClickedEstimatePrice(event) {
+  event.preventDefault();
   console.log("Estimate price button clicked");
-  var sqft = document.getElementById("uiSqft");
+  
+  var sqft = parseFloat($('#uiSqft').val());
   var bhk = getBHKValue();
   var bathrooms = getBathValue();
-  var location = document.getElementById("uiLocations");
-  var estPrice = document.getElementById("uiEstimatedPrice");
+  var location = $('#uiLocations').val();
+  var estPrice = $('#uiEstimatedPrice');
 
- var url = "http://127.0.0.1:5000/predict_home_price"; //Use this if you are NOT using nginx which is first 7 tutorials
-   // Use this if  you are using nginx. i.e tutorial 8 and onwards
+  // Basic validation
+  if (isNaN(sqft)) {
+    alert("Please enter a valid area (sqft)");
+    return;
+  }
+  if (!location) {
+    alert("Please select a location");
+    return;
+  }
 
-  $.post(url, {
-      total_sqft: parseFloat(sqft.value),
-      bhk: bhk,
-      bath: bathrooms,
-      location: location.value
-  },function(data, status) {
-      console.log(data.estimated_price);
-      estPrice.innerHTML = "<h2>" + data.estimated_price.toString() + " Lakh</h2>";
-      console.log(status);
+  estPrice.html("<h2>Estimating...</h2>");
+
+  $.post("http://127.0.0.1:5000/predict_home_price", {
+    total_sqft: sqft,
+    bhk: bhk,
+    bath: bathrooms,
+    location: location
+  }).done(function(data) {
+    estPrice.html("<h2>" + data.estimated_price + " Lakh</h2>");
+  }).fail(function(error) {
+    estPrice.html("<h2>Error estimating price</h2>");
   });
 }
+
 
 function onPageLoad() {
   console.log( "document loaded" );
   var url = "http://127.0.0.1:5000/get_location_names"; // Use this if you are NOT using nginx which is first 7 tutorials
-   // Use this if  you are using nginx. i.e tutorial 8 and onwards
-  $.get(url,function(data, status) {
-      console.log("got response for get_location_names request");
-      console.log("Locations received:", locations);
-      if(data) {
-          var locations = data.locations;
-          var uiLocations = document.getElementById("uiLocations");
-          $('#uiLocations').empty();
-          for(var i in locations) {
-              var opt = new Option(locations[i]);
-              $('#uiLocations').append(opt);
-          }
-      }
-  });
-}
+  // Use this if  you are using nginx. i.e tutorial 8 and onwards
+ $.get("http://127.0.0.1:5000/get_location_names", function(data) {
+    if(data && data.locations) {
+        var $loc = $('#uiLocations');
+        $loc.empty();
+        $loc.append('<option value="" disabled selected>Choose a Location</option>');
+        data.locations.forEach(function(location) {
+            $loc.append($('<option></option>').val(location).text(location));
+        });
+    }
+});
+        
+      
+  }
+
 
 window.onload = onPageLoad;
